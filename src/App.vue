@@ -1,19 +1,64 @@
 <script setup lang="ts">
-import HelloWorld from './components/HelloWorld.vue'
+import { ref } from 'vue'
+import { useSwipe } from '@vueuse/core'
+import TopMenu from './components/TopMenu.vue'
+import ActionPanel from './components/ActionPanel.vue'
+import DataPanel from './components/DataPanel.vue'
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/tabs'
+
+const activeTab = ref('data')
+
+const swipeContainer = ref<HTMLElement | null>(null)
+const { lengthX, lengthY } = useSwipe(swipeContainer, {
+  onSwipeEnd(_e, direction) {
+    // Only switch if mostly horizontal
+    if (Math.abs(lengthX.value) > Math.abs(lengthY.value) && Math.abs(lengthX.value) > 50) {
+      if (direction === 'left') {
+        activeTab.value = 'actions'
+      } else if (direction === 'right') {
+        activeTab.value = 'data'
+      }
+    }
+  },
+})
 </script>
-
 <template>
-  <div>
-    <a href="https://vite.dev" target="_blank">
-      <img src="/vite.svg" class="logo" alt="Vite logo" />
-    </a>
-    <a href="https://vuejs.org/" target="_blank">
-      <img src="./assets/vue.svg" class="logo vue" alt="Vue logo" />
-    </a>
-  </div>
-  <HelloWorld msg="Vite + Vue" />
-</template>
+  <div class="min-h-screen bg-background text-foreground flex flex-col overflow-x-hidden">
+    <TopMenu />
+    <main class="flex-1 w-full max-w-7xl mx-auto flex flex-col relative pb-24 md:pb-8 md:p-8">
+      
+      <!-- Desktop Layout: Flex (hidden on mobile) -->
+      <div class="hidden md:flex gap-6 items-start h-full">
+        <ActionPanel class="sticky top-24 w-[400px] shrink-0" />
+        <DataPanel class="w-full relative flex-1" />
+      </div>
 
+      <!-- Mobile Layout: Swipeable container with fixed bottom navigation -->
+      <div class="md:hidden flex flex-col flex-1 h-full w-full" ref="swipeContainer">
+        <!-- Content Area -->
+        <div class="flex-1 w-full p-4 overflow-y-auto mb-20">
+          <DataPanel v-if="activeTab === 'data'" class="animate-in fade-in slide-in-from-right-4 duration-300" />
+          <ActionPanel v-else class="animate-in fade-in slide-in-from-left-4 duration-300 border-none bg-transparent shadow-none" />
+        </div>
+
+        <!-- Fixed Bottom Tab Navigation -->
+        <div class="fixed bottom-0 left-0 right-0 h-20 p-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t z-50">
+          <Tabs v-model="activeTab" class="w-full h-full">
+            <TabsList class="grid w-full h-full grid-cols-2">
+              <TabsTrigger value="data" class="h-full text-base font-medium">Data Table</TabsTrigger>
+              <TabsTrigger value="actions" class="h-full text-base font-medium">Actions</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</template>
 <style scoped>
 .logo {
   height: 6em;
