@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { useSwipe } from '@vueuse/core'
 import TopMenu from './components/TopMenu.vue'
-import ActionPanel from './components/ActionPanel.vue'
+import VirtualTap from './components/VirtualTap.vue'
 import DataPanel from './components/DataPanel.vue'
 import {
   Tabs,
@@ -33,7 +33,7 @@ const { lengthX, lengthY } = useSwipe(swipeContainer, {
       
       <!-- Desktop Layout: Flex (hidden on mobile) -->
       <div class="hidden md:flex gap-6 items-start h-full">
-        <ActionPanel class="sticky top-24 w-[400px] shrink-0" />
+        <VirtualTap class="sticky top-24 w-[400px] shrink-0" />
         <DataPanel class="w-full relative flex-1" />
       </div>
 
@@ -42,7 +42,7 @@ const { lengthX, lengthY } = useSwipe(swipeContainer, {
         <!-- Content Area -->
         <div class="flex-1 w-full p-4 overflow-y-auto mb-20">
           <DataPanel v-if="activeTab === 'data'" class="animate-in fade-in slide-in-from-right-4 duration-300" />
-          <ActionPanel v-else class="animate-in fade-in slide-in-from-left-4 duration-300 border-none bg-transparent shadow-none" />
+          <VirtualTap v-else class="animate-in fade-in slide-in-from-left-4 duration-300 border-none bg-transparent shadow-none" />
         </div>
 
         <!-- Fixed Bottom Tab Navigation -->
