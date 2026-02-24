@@ -11,13 +11,15 @@
   "dependencies": {
     "@tanstack/vue-table": "^8.21.3",
     "@vueuse/core": "^14.2.1",
+    "@xstate/vue": "^5.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-vue-next": "^0.575.0",
     "reka-ui": "^2.8.0",
     "tailwind-merge": "^3.5.0",
     "tailwindcss-animate": "^1.0.7",
-    "vue": "^3.5.25"
+    "vue": "^3.5.25",
+    "xstate": "^5.28.0"
   },
   "devDependencies": {
     "@types/node": "^24.10.1",
