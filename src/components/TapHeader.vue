@@ -5,6 +5,8 @@ const props = defineProps<{
   tapId: string
   status: string
   isMaintenance?: boolean
+  limitAmountMl?: number
+  valveOpened?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -30,12 +32,27 @@ const emit = defineEmits<{
       </Toggle>
     </div>
     <div class="flex items-center justify-between">
-      <span class="text-base font-mono font-medium text-primary px-2 py-0.5 bg-primary/10 rounded-md">{{ tapId }}</span>
+      <div class="flex items-center gap-3">
+        <span class="text-base font-mono font-medium text-primary px-2 py-0.5 bg-primary/10 rounded-md">{{ tapId }}</span>
+      </div>
       <span 
         class="px-3 py-1 text-xs font-semibold rounded-full uppercase tracking-wider bg-primary/10 text-primary border border-primary/20 shrink-0"
       >
         {{ status }}
       </span>
+    </div>
+    
+    <div class="flex flex-col gap-1 mt-1 text-sm text-muted-foreground/80 font-mono tracking-tight bg-secondary/20 p-2 rounded-md border border-border/50">
+      <div class="flex justify-between items-center">
+        <span>Limit amount (ml):</span>
+        <span class="font-bold text-foreground">{{ limitAmountMl || 0 }}</span>
+      </div>
+      <div class="flex justify-between items-center">
+        <span>Valve state:</span>
+        <span class="font-bold border px-1.5 py-0.5 rounded text-[10px] uppercase" :class="valveOpened ? 'bg-primary/20 text-primary border-primary/30' : 'bg-muted text-muted-foreground border-border'">
+          {{ valveOpened ? 'Open' : 'Closed' }}
+        </span>
+      </div>
     </div>
   </div>
 </template>

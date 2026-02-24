@@ -8,7 +8,7 @@ import TapOperation from './TapOperation.vue'
 const tapId = 'TAP-01'
 
 // Application layer provides the domain state and actions
-const { state, identify, pulse, toggleMaintenance } = useVirtualTap()
+const { state, identify, pulse, toggleMaintenance, servedAmountMl, limitAmountMl, valveOpened } = useVirtualTap()
 
 // Presentation layer handles how the domain state is displayed
 const formattedTimer = computed(() => {
@@ -34,11 +34,8 @@ const currentStatus = computed<string>(() => {
 });
 
 const currentStateLiteral = computed(() => {
-  const s = state.value;
-  if (s.matches('validating')) return 'Validating...';
-  if (s.matches({ operation: 'finished' })) return 'Finished';
-  if (s.matches('operation')) return 'Pouring...';
-  return 'Identification';
+  const status = currentStatus.value;
+  return status.charAt(0).toUpperCase() + status.slice(1);
 });
 
 const handleIdentify = (payload: { tag: string }) => {
@@ -56,6 +53,8 @@ const handlePulse = (payload: { amount: number, count: number }) => {
       :tap-id="tapId" 
       :status="currentStatus" 
       :is-maintenance="isMaintenance"
+      :limit-amount-ml="limitAmountMl"
+      :valve-opened="valveOpened"
       @toggle-maintenance="toggleMaintenance"
     />
     
@@ -68,6 +67,8 @@ const handlePulse = (payload: { amount: number, count: number }) => {
     <TapOperation 
       :is-operation="isOperation" 
       :formatted-timer="formattedTimer"
+      :limit-amount-ml="limitAmountMl"
+      :served-amount-ml="servedAmountMl"
       @pulse="handlePulse" 
     />
   </div>
