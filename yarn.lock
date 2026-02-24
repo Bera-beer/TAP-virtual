@@ -575,6 +575,11 @@
   resolved "https://registry.yarnpkg.com/@vueuse/shared/-/shared-14.2.1.tgz#829a271147937f6b105bb1422d3171e6142f47ba"
   integrity sha512-shTJncjV9JTI4oVNyF1FQonetYAiTBd+Qj7cY89SWbXSkx7gyhrgtEdF2ZAVWS1S3SHlaROO6F2IesJxQEkZBw==
 
+"@xstate/vue@^5.0.0":
+  version "5.0.0"
+  resolved "https://registry.yarnpkg.com/@xstate/vue/-/vue-5.0.0.tgz#fec8c366cd19312caa19fbc33782def5944d664d"
+  integrity sha512-9TyJV4yz5QLJdEU44Ly9LBooEyZmv0nht3qEvDflxXAJmSn1dzaZeESdHFm+ANHtxoUed5jGqH6NT86BusvXQg==
+
 alien-signals@^3.0.0:
   version "3.1.2"
   resolved "https://registry.yarnpkg.com/alien-signals/-/alien-signals-3.1.2.tgz#26e623e3ed81e401df1a7c503f726e2288a4fa02"
@@ -1286,3 +1291,8 @@ vue@^3.5.25:
     "@vue/runtime-dom" "3.5.28"
     "@vue/server-renderer" "3.5.28"
     "@vue/shared" "3.5.28"
+
+xstate@^5.28.0:
+  version "5.28.0"
+  resolved "https://registry.yarnpkg.com/xstate/-/xstate-5.28.0.tgz#d776fc2aad92f2e6521249025b96c85a254e2d40"
+  integrity sha512-Iaqq6ZrUzqeUtA3hC5LQKZfR8ZLzEFTImMHJM3jWEdVvXWdKvvVLXZEiNQWm3SCA9ZbEou/n5rcsna1wb9t28A==

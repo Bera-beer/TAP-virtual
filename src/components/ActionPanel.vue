@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import { TapStatus } from '@/types/tap'
+import { useTapSimulator } from '@/application/useTapSimulator'
 
 const tapId = ref<string>('TAP-01')
 const tags = ref<string[]>(['22725620', '07228325', '21634656'])
@@ -9,7 +10,7 @@ const selectedTag = ref<string>(tags.value[0] || '')
 const status = ref<TapStatus>(TapStatus.READY)
 
 const progress = ref<number>(0)
-const timer = ref<string>('00:000')
+const { currentState, formattedTimer, onIdentifyClick } = useTapSimulator()
 
 let intervalId: ReturnType<typeof setInterval> | null = null
 
@@ -76,8 +77,10 @@ const stopProgress = () => {
     <Button 
       class="w-full h-12 text-lg font-medium shadow-sm transition-transform active:scale-[0.98]" 
       variant="default"
+      @click="onIdentifyClick"
+      :disabled="currentState === 'operation'"
     >
-      Identification
+      {{ currentState === 'operation' ? 'Operating...' : 'Identification' }}
     </Button>
 
     <!-- Progress Bar Section -->
@@ -110,7 +113,7 @@ const stopProgress = () => {
     <div class="flex flex-col gap-2 items-center justify-center p-6 bg-secondary/30 rounded-lg border">
       <span class="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Timer</span>
       <div class="text-5xl font-mono font-bold tracking-tight text-foreground/90 tabular-nums drop-shadow-sm">
-        {{ timer }}
+        {{ formattedTimer }}
       </div>
     </div>
 
