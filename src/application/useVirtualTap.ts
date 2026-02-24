@@ -1,8 +1,9 @@
 import { useMachine } from '@xstate/vue';
 import { fromPromise } from 'xstate';
-import { Subject, debounceTime } from 'rxjs';
+import { Subject, switchMap, timer, map, takeWhile } from 'rxjs';
 import { onUnmounted, ref } from 'vue';
 import { virtualTapMachine, VirtualTapEventName } from '@/domain/tap/virtualTapMachine';
+import { VirtualTapState } from '@/types/tap';
 
 /**
  * Hexagonal architecture: Application Layer
@@ -12,6 +13,7 @@ export function useVirtualTap() {
   const servedAmountMl = ref(0);
   const limitAmountMl = ref(0);
   const valveOpened = ref(false);
+  const remainingMs = ref(0);
 
   // Provide the implementation for the reset counter invoke
   const { snapshot, send, actorRef } = useMachine(virtualTapMachine.provide({
@@ -26,6 +28,12 @@ export function useVirtualTap() {
     console.log(`[Tap Machine] State triggered:`, newState.value, newState.context);
     limitAmountMl.value = newState.context.limitAmountMl || 0;
     valveOpened.value = newState.context.valveOpened || false;
+
+    if (newState.matches(VirtualTapState.OPERATION)) {
+      if (remainingMs.value === 0) remainingMs.value = 5000;
+    } else {
+      remainingMs.value = 0;
+    }
   });
 
   const pulseSubject = new Subject<{ amount: number, count?: number }>();
@@ -39,9 +47,21 @@ export function useVirtualTap() {
   });
 
   const debounceSubscription = pulseSubject.pipe(
-    debounceTime(5000)
-  ).subscribe(() => {
-    send({ type: VirtualTapEventName.EXPIRED });
+    switchMap(() => {
+      const duration = 5000;
+      const start = Date.now();
+      return timer(0, 50).pipe(
+        map(() => Math.max(0, duration - (Date.now() - start))),
+        takeWhile(ms => ms > 0 && snapshot.value.matches(VirtualTapState.OPERATION), true)
+      );
+    })
+  ).subscribe((ms) => {
+    if (!snapshot.value.matches(VirtualTapState.OPERATION)) return;
+    
+    remainingMs.value = ms;
+    if (ms === 0) {
+      send({ type: VirtualTapEventName.EXPIRED });
+    }
   });
 
   onUnmounted(() => {
@@ -64,7 +84,7 @@ export function useVirtualTap() {
   };
 
   const toggleMaintenance = () => {
-    if (snapshot.value.matches('maintenance')) {
+    if (snapshot.value.matches(VirtualTapState.MAINTENANCE)) {
       send({ type: VirtualTapEventName.MAINTENANCE_END });
     } else {
       send({ type: VirtualTapEventName.MAINTENANCE_START });
@@ -79,6 +99,7 @@ export function useVirtualTap() {
     toggleMaintenance,
     servedAmountMl,
     limitAmountMl,
-    valveOpened
+    valveOpened,
+    remainingMs
   };
 }

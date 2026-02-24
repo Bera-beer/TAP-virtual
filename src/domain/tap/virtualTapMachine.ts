@@ -1,4 +1,5 @@
 import { setup, fromPromise, assign } from 'xstate';
+import { VirtualTapState } from '@/types/tap';
 export const VirtualTapEventName = {
   DONE: 'DONE',
   TAG_DETECTED: 'TAG_DETECTED',
@@ -66,49 +67,49 @@ export const virtualTapMachine = setup({
         valveOpened: false
     },
     id: 'TAP',
-    initial: 'idle',
+    initial: VirtualTapState.IDLE,
     states: {
-        idle: {
+        [VirtualTapState.IDLE]: {
             description: 'The machine is idle and waiting for user identification.',
             on: {
                 [VirtualTapEventName.TAG_DETECTED]: {
-                    target: 'validating',
+                    target: VirtualTapState.VALIDATING,
                     actions: {
                         type: 'assignCredential'
                     }
                 },
                 [VirtualTapEventName.MAINTENANCE_START]: {
-                    target: 'maintenance'
+                    target: VirtualTapState.MAINTENANCE
                 }
             }
         },
-        validating: {
+        [VirtualTapState.VALIDATING]: {
             description: 'The machine is validating the user credits asynchronously.',
             invoke: {
                 id: 'validateCredential',
                 src: 'validateCredential',
                 input: {},
                 onDone: {
-                    target: 'operation',
+                    target: VirtualTapState.OPERATION,
                     actions: assign({
                         user: ({ event }) => event.output.user,
                         limitAmountMl: ({ event }) => event.output.limitAmountMl
                     })
                 },
                 onError: {
-                    target: 'invalid'
+                    target: VirtualTapState.INVALID
                 }
             }
         },
-        maintenance: {
+        [VirtualTapState.MAINTENANCE]: {
             description: 'Block interaction to maintenance',
             on: {
                 [VirtualTapEventName.MAINTENANCE_END]: {
-                    target: 'idle'
+                    target: VirtualTapState.IDLE
                 }
             }
         },
-        operation: {
+        [VirtualTapState.OPERATION]: {
             description: 'The machine is in operation, dispensing liquid on pulses.',
             invoke: {
                 src: 'resetServerAmount'
@@ -121,34 +122,34 @@ export const virtualTapMachine = setup({
             },
             on: {
                 [VirtualTapEventName.DONE]: {
-                    target: 'finished'
+                    target: VirtualTapState.FINISHED
                 },
                 [VirtualTapEventName.EXPIRED]: {
-                    target: 'finished'
+                    target: VirtualTapState.FINISHED
                 }
             },
             after: {
                 30000: {
-                    target: 'finished'
+                    target: VirtualTapState.FINISHED
                 }
             }
         },
-        finished: {
+        [VirtualTapState.FINISHED]: {
             description: 'Sending results and resetting context.',
             entry: {
                 type: 'wrapUpOperation'
             },
             after: {
                 2000: {
-                    target: '#TAP.idle'
+                    target: VirtualTapState.IDLE
                 }
             }
         },
-        invalid: {
+        [VirtualTapState.INVALID]: {
             description: 'The validation failed; returning to idle after a delay.',
             after: {
                 2000: {
-                    target: 'idle'
+                    target: VirtualTapState.IDLE
                 }
             }
         }

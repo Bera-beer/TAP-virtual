@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useVirtualTap } from '@/application/useVirtualTap'
+import { VirtualTapState } from '@/types/tap'
 import TapHeader from './TapHeader.vue'
 import TapControls from './TapControls.vue'
 import TapOperation from './TapOperation.vue'
@@ -8,19 +9,11 @@ import TapOperation from './TapOperation.vue'
 const tapId = 'TAP-01'
 
 // Application layer provides the domain state and actions
-const { state, identify, pulse, toggleMaintenance, servedAmountMl, limitAmountMl, valveOpened } = useVirtualTap()
+const { state, identify, pulse, toggleMaintenance, servedAmountMl, limitAmountMl, valveOpened, remainingMs } = useVirtualTap()
 
-// Presentation layer handles how the domain state is displayed
-const formattedTimer = computed(() => {
-  const totalMs = state.value.context.remainingMs || 0;
-  const seconds = Math.floor(totalMs / 1000);
-  const ms = totalMs % 1000;
-  return `${seconds.toString().padStart(2, '0')}:${ms.toString().padStart(3, '0')}`;
-});
-
-const isIdle = computed(() => state.value.matches('idle'));
-const isMaintenance = computed(() => state.value.matches('maintenance'));
-const isOperation = computed(() => state.value.matches('operation'));
+const isIdle = computed(() => state.value.matches(VirtualTapState.IDLE));
+const isMaintenance = computed(() => state.value.matches(VirtualTapState.MAINTENANCE));
+const isOperation = computed(() => state.value.matches(VirtualTapState.OPERATION));
 
 const currentStatus = computed<string>(() => {
   // Extracting a simple string representation from the potentially nested state object
@@ -31,11 +24,6 @@ const currentStatus = computed<string>(() => {
     if (keys.length > 0) return keys[0] as string;
   }
   return 'unknown';
-});
-
-const currentStateLiteral = computed(() => {
-  const status = currentStatus.value;
-  return status.charAt(0).toUpperCase() + status.slice(1);
 });
 
 const handleIdentify = (payload: { tag: string }) => {
@@ -60,13 +48,13 @@ const handlePulse = (payload: { amount: number, count: number }) => {
     
     <TapControls 
       :is-idle="isIdle" 
-      :current-state-literal="currentStateLiteral"
+      :current-status="(currentStatus as VirtualTapState)"
       @identify="handleIdentify" 
     />
     
     <TapOperation 
       :is-operation="isOperation" 
-      :formatted-timer="formattedTimer"
+      :remaining-ms="remainingMs"
       :limit-amount-ml="limitAmountMl"
       :served-amount-ml="servedAmountMl"
       @pulse="handlePulse" 

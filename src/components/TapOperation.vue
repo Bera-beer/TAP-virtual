@@ -4,7 +4,7 @@ import { Progress } from '@/components/ui/progress'
 
 const props = defineProps<{
   isOperation: boolean
-  formattedTimer: string
+  remainingMs: number
   limitAmountMl: number
   servedAmountMl: number
 }>()
@@ -47,11 +47,16 @@ const onClickPulse = () => {
     </div>
 
     <!-- Timer Section -->
-    <div class="flex flex-col gap-2 items-center justify-center p-6 bg-secondary/30 rounded-lg border">
-      <span class="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Timer</span>
-      <div class="text-5xl font-mono font-bold tracking-tight text-foreground/90 tabular-nums drop-shadow-sm">
-        {{ formattedTimer }}
+    <div class="flex flex-col gap-2 relative w-full pt-4">
+      <div class="flex items-center">
+        <span class="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+          Remaining Time
+        </span>
       </div>
+      <Progress 
+        :model-value="(remainingMs / 5000) * 100" 
+        class="h-4 w-full"
+      />
     </div>
   </div>
 </template>
