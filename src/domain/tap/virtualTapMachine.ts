@@ -1,9 +1,11 @@
 import { setup, fromPromise, assign } from 'xstate';
+import { VirtualTapState } from '@/types/tap';
 export const VirtualTapEventName = {
   DONE: 'DONE',
   TAG_DETECTED: 'TAG_DETECTED',
   MAINTENANCE_END: 'MAINTENANCE_END',
   MAINTENANCE_START: 'MAINTENANCE_START',
+  EXPIRED: 'EXPIRED',
 } as const;
 
 export type VirtualTapEventName = typeof VirtualTapEventName[keyof typeof VirtualTapEventName];
@@ -15,17 +17,18 @@ export interface VirtualTapUser {
 
 export interface VirtualTapContext {
   limitAmountMl: number;
-  servedAmountMl: number;
   currentTag?: string;
   user?: VirtualTapUser;
   remainingMs?: number;
+  valveOpened: boolean;
 }
 
 export type VirtualTapEvent =
   | { type: typeof VirtualTapEventName.DONE }
   | { type: typeof VirtualTapEventName.TAG_DETECTED; tag: string }
   | { type: typeof VirtualTapEventName.MAINTENANCE_END }
-  | { type: typeof VirtualTapEventName.MAINTENANCE_START };
+  | { type: typeof VirtualTapEventName.MAINTENANCE_START }
+  | { type: typeof VirtualTapEventName.EXPIRED };
 
 export const virtualTapMachine = setup({
     types: {
@@ -33,8 +36,8 @@ export const virtualTapMachine = setup({
         events: {} as VirtualTapEvent
     },
     actions: {
-        valveOpen: () => { },
-        valveClose: () => { },
+        valveOpen: assign({ valveOpened: true }),
+        valveClose: assign({ valveOpened: false }),
         wrapUpOperation: () => { },
         assignCredential: assign({
             currentTag: ({ event }) => (event.type === VirtualTapEventName.TAG_DETECTED ? event.tag : undefined)
@@ -51,99 +54,102 @@ export const virtualTapMachine = setup({
                 },
                 limitAmountMl: 200
             };
+        }),
+        resetServerAmount: fromPromise(async () => {
+            // Placeholder replaced explicitly at application level
         })
     },
     guards: {
-        amountLimitReached: ({ context }) => context.servedAmountMl >= context.limitAmountMl
     }
 }).createMachine({
     context: {
         limitAmountMl: 100,
-        servedAmountMl: 0
+        valveOpened: false
     },
     id: 'TAP',
-    initial: 'idle',
+    initial: VirtualTapState.IDLE,
     states: {
-        idle: {
+        [VirtualTapState.IDLE]: {
             description: 'The machine is idle and waiting for user identification.',
             on: {
                 [VirtualTapEventName.TAG_DETECTED]: {
-                    target: 'validating',
+                    target: VirtualTapState.VALIDATING,
                     actions: {
                         type: 'assignCredential'
                     }
                 },
                 [VirtualTapEventName.MAINTENANCE_START]: {
-                    target: 'maintenance'
+                    target: VirtualTapState.MAINTENANCE
                 }
             }
         },
-        validating: {
+        [VirtualTapState.VALIDATING]: {
             description: 'The machine is validating the user credits asynchronously.',
             invoke: {
                 id: 'validateCredential',
                 src: 'validateCredential',
                 input: {},
                 onDone: {
-                    target: 'operation',
+                    target: VirtualTapState.OPERATION,
                     actions: assign({
                         user: ({ event }) => event.output.user,
                         limitAmountMl: ({ event }) => event.output.limitAmountMl
                     })
                 },
                 onError: {
-                    target: 'invalid'
+                    target: VirtualTapState.INVALID
                 }
             }
         },
-        maintenance: {
+        [VirtualTapState.MAINTENANCE]: {
             description: 'Block interaction to maintenance',
             on: {
                 [VirtualTapEventName.MAINTENANCE_END]: {
-                    target: 'idle'
+                    target: VirtualTapState.IDLE
                 }
             }
         },
-        operation: {
+        [VirtualTapState.OPERATION]: {
             description: 'The machine is in operation, dispensing liquid on pulses.',
-            initial: 'pouring',
-            states: {
-                pouring: {
-                    entry: {
-                        type: 'valveOpen'
-                    },
-                    exit: {
-                        type: 'valveClose'
-                    },
-                    on: {
-                        [VirtualTapEventName.DONE]: {
-                            target: 'finished'
-                        }
-                    },
-                    after: {
-                        30000: {
-                            target: 'finished'
-                        }
-                    }
+            invoke: {
+                src: 'resetServerAmount'
+            },
+            entry: {
+                type: 'valveOpen'
+            },
+            exit: {
+                type: 'valveClose'
+            },
+            on: {
+                [VirtualTapEventName.DONE]: {
+                    target: VirtualTapState.FINISHED
                 },
-                finished: {
-                    description: 'Sending results and resetting context.',
-                    entry: {
-                        type: 'wrapUpOperation'
-                    },
-                    after: {
-                        2000: {
-                            target: '#TAP.idle'
-                        }
-                    }
+                [VirtualTapEventName.EXPIRED]: {
+                    target: VirtualTapState.FINISHED
+                }
+            },
+            after: {
+                30000: {
+                    target: VirtualTapState.FINISHED
                 }
             }
         },
-        invalid: {
+        [VirtualTapState.FINISHED]: {
+            description: 'Sending results and resetting context.',
+            entry: {
+                type: 'wrapUpOperation'
+            },
+            after: {
+                2000: {
+                    target: VirtualTapState.IDLE
+                }
+            }
+        },
+        [VirtualTapState.INVALID]: {
             description: 'The validation failed; returning to idle after a delay.',
             after: {
                 2000: {
-                    target: 'idle'
+                    target: VirtualTapState.IDLE
                 }
             }
         }

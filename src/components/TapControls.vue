@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { Button } from '@/components/ui/button'
+import { VirtualTapState, VirtualTapStateLiteralMap } from '@/types/tap'
 
 const props = defineProps<{
   isIdle: boolean
-  currentStateLiteral: string
+  currentStatus: VirtualTapState
 }>()
 
 const emit = defineEmits<{
@@ -51,7 +52,7 @@ const onIdentify = () => {
       @click="onIdentify"
       :disabled="!isIdle"
     >
-      {{ currentStateLiteral }}
+      {{ VirtualTapStateLiteralMap[currentStatus] || 'Unknown' }}
     </Button>
   </div>
 </template>
