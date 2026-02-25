@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue'
-import { communicationService } from '@/infrastructure/providers/CommunicationProvider'
+import { useCommunication } from '@/composables/useCommunication'
+import moment from 'moment'
 import {
   Table,
   TableBody,
@@ -10,21 +10,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+const { events, publishCommand } = useCommunication()
 
-onMounted(() => {
-  communicationService.startListening()
-})
-
-onUnmounted(() => {
-  communicationService.stopListening()
-})
-
-const events = communicationService.events
-const CMD_TOPIC = 'test/topic/vue-hexagonal-example/commands'
-
-const publishCommand = (command: string) => {
-  communicationService.publish(CMD_TOPIC, JSON.stringify({ command }))
-}
+const formatTime = (timestamp: string) => moment(timestamp).format('HH:mm:ss')
 </script>
 
 <template>
@@ -52,14 +40,14 @@ const publishCommand = (command: string) => {
       <TableCaption>A list of your recent MQTT events.</TableCaption>
       <TableHeader>
         <TableRow>
-          <TableHead class="w-[120px]">Timestamp</TableHead>
+          <TableHead class="w-[120px]">Time</TableHead>
           <TableHead class="w-[200px]">Topic</TableHead>
           <TableHead>Message Content</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         <TableRow v-for="event in events" :key="event.id">
-          <TableCell class="font-medium text-muted-foreground whitespace-nowrap">{{ event.timestamp }}</TableCell>
+          <TableCell class="font-xs text-muted-foreground whitespace-nowrap">{{ formatTime(event.timestamp) }}</TableCell>
           <TableCell class="text-xs text-muted-foreground break-all">{{ event.topic }}</TableCell>
           <TableCell class="font-mono text-sm break-all">{{ event.content }}</TableCell>
         </TableRow>
