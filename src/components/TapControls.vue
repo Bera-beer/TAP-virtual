@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { Button } from '@/components/ui/button'
-import { VirtualTapState, VirtualTapStateLiteralMap } from '@/types/tap'
+import { VirtualTapState, VirtualTapStateLiteralMap } from '@/core/domain/tap'
 
 const props = defineProps<{
   isIdle: boolean

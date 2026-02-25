@@ -1,5 +1,5 @@
 import { setup, fromPromise, assign } from 'xstate';
-import { VirtualTapState } from '@/types/tap';
+import { VirtualTapState } from '@/core/domain/tap';
 export const VirtualTapEventName = {
   DONE: 'DONE',
   TAG_DETECTED: 'TAG_DETECTED',

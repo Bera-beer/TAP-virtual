@@ -1,9 +1,10 @@
 import { useMachine } from '@xstate/vue';
 import { fromPromise } from 'xstate';
 import { Subject, switchMap, timer, map, takeWhile } from 'rxjs';
-import { onUnmounted, ref } from 'vue';
-import { virtualTapMachine, VirtualTapEventName } from '@/domain/tap/virtualTapMachine';
-import { VirtualTapState } from '@/types/tap';
+import { onUnmounted, ref, watch } from 'vue';
+import { virtualTapMachine, VirtualTapEventName } from '@/core/domain/tap/virtualTapMachine';
+import { VirtualTapState } from '@/core/domain/tap';
+import { communicationService } from '@/infrastructure/di/container'
 
 /**
  * Hexagonal architecture: Application Layer
@@ -14,6 +15,13 @@ export function useVirtualTap() {
   const limitAmountMl = ref(0);
   const valveOpened = ref(false);
   const remainingMs = ref(0);
+
+  // Default topic for testing, you could make it configurable eventually
+  const MQTT_TOPIC_STATE = 'test/topic/vue-hexagonal-example/state'
+  const MQTT_TOPIC_CMD = 'test/topic/vue-hexagonal-example/commands'
+
+  // Ensure MQTT client is connected
+  communicationService.startListening();
 
   // Provide the implementation for the reset counter invoke
   const { snapshot, send, actorRef } = useMachine(virtualTapMachine.provide({
@@ -26,6 +34,14 @@ export function useVirtualTap() {
 
   const stateSubscription = actorRef.subscribe((newState) => {
     console.log(`[Tap Machine] State triggered:`, newState.value, newState.context);
+    
+    // Publish State Change via Hexagonal Architecture
+    const payload = JSON.stringify({
+      state: newState.value,
+      context: newState.context
+    })
+    communicationService.publish(MQTT_TOPIC_STATE, payload)
+
     limitAmountMl.value = newState.context.limitAmountMl || 0;
     valveOpened.value = newState.context.valveOpened || false;
 
@@ -90,6 +106,26 @@ export function useVirtualTap() {
       send({ type: VirtualTapEventName.MAINTENANCE_START });
     }
   };
+
+  const lastProcessedEventId = ref('');
+  watch(() => communicationService.events.value[0], (latestEvent) => {
+    if (!latestEvent) return;
+    if (latestEvent.id === lastProcessedEventId.value) return;
+    lastProcessedEventId.value = latestEvent.id;
+
+    if (latestEvent.topic === MQTT_TOPIC_CMD) {
+      try {
+        const payload = JSON.parse(latestEvent.content);
+        if (payload.command === 'MAINTENANCE') {
+          toggleMaintenance();
+        } else if (payload.command === 'START_OPERATION') {
+          identify('MQTT-CMD');
+        }
+      } catch (e) {
+        console.error('Failed to parse command payload', e);
+      }
+    }
+  }, { deep: true });
 
   return {
     state: snapshot,
