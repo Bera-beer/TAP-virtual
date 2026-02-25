@@ -1,15 +1,44 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import { useVirtualTap } from '@/composables/useVirtualTap'
+import { useCommunication } from '@/composables/useCommunication'
 import { VirtualTapState } from '@/core/domain/tap'
+
 import TapHeader from './TapHeader.vue'
 import TapControls from './TapControls.vue'
 import TapOperation from './TapOperation.vue'
 
 const tapId = 'TAP-01'
 
-// Application layer provides the domain state and actions
-const { state, identify, pulse, toggleMaintenance, servedAmountMl, limitAmountMl, valveOpened, remainingMs } = useVirtualTap()
+// State machine handlers
+const { state, actorRef, identify, flow, toggleMaintenance, servedAmountMl, limitAmountMl, valveOpened, remainingMs } = useVirtualTap()
+
+// Communication handlers
+const { publishState, onCommand } = useCommunication()
+
+let unsubscribeState: { unsubscribe: () => void }
+let unsubscribeCmd: { unsubscribe: () => void }
+
+onMounted(() => {
+  // Subscribe to Application Layer state changes and publish to Communication Adapter
+  unsubscribeState = actorRef.subscribe((newState) => {
+    publishState(newState.value, newState.context)
+  })
+
+  // Listen to remote Commands from Communication Adapter and interact with Application Layer
+  unsubscribeCmd = onCommand((command) => {
+    if (command === 'MAINTENANCE') {
+      toggleMaintenance();
+    } else if (command === 'START_OPERATION') {
+      identify('MQTT-CMD');
+    }
+  })
+})
+
+onUnmounted(() => {
+  unsubscribeState?.unsubscribe()
+  unsubscribeCmd?.unsubscribe()
+})
 
 const isIdle = computed(() => state.value.matches(VirtualTapState.IDLE));
 const isMaintenance = computed(() => state.value.matches(VirtualTapState.MAINTENANCE));
@@ -30,8 +59,8 @@ const handleIdentify = (payload: { tag: string }) => {
   identify(payload.tag)
 }
 
-const handlePulse = (payload: { amount: number, count: number }) => {
-  pulse(payload.amount, payload.count)
+const handleFlow = (payload: { amount: number, count: number }) => {
+  flow(payload.amount, payload.count)
 }
 </script>
 
@@ -57,7 +86,7 @@ const handlePulse = (payload: { amount: number, count: number }) => {
       :remaining-ms="remainingMs"
       :limit-amount-ml="limitAmountMl"
       :served-amount-ml="servedAmountMl"
-      @pulse="handlePulse" 
+      @flow="handleFlow" 
     />
   </div>
 </template>

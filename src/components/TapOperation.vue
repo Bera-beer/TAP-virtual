@@ -10,7 +10,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'pulse', payload: { amount: number, count: number }): void
+  (e: 'flow', payload: { amount: number, count: number }): void
 }>()
 
 const progress = computed(() => {
@@ -21,7 +21,7 @@ const progress = computed(() => {
 
 const onClickPulse = () => {
   if (props.isOperation) {
-    emit('pulse', { amount: 30, count: 1 })
+    emit('flow', { amount: 30, count: 1 })
   }
 }
 </script>
@@ -32,7 +32,7 @@ const onClickPulse = () => {
     <div class="flex flex-col gap-2 relative w-full">
       <div class="flex items-center">
         <label for="progress-dispense" class="text-sm font-semibold text-muted-foreground uppercase tracking-wide cursor-pointer">
-          Dispense (Click)
+          Dispense (Click & Hold to flow)
         </label>
         <span class="ml-auto text-sm font-bold text-foreground">
           {{ progress }}%
@@ -47,7 +47,7 @@ const onClickPulse = () => {
     </div>
 
     <!-- Timer Section -->
-    <div class="flex flex-col gap-2 relative w-full pt-4">
+    <div class="flex flex-col gap-2 relative w-full">
       <div class="flex items-center">
         <span class="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
           Remaining Time

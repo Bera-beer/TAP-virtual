@@ -1,17 +1,17 @@
 import mqtt from 'mqtt'
-import type { MqttRepository } from '@/core/ports/MqttRepository'
-import type { MqttEvent } from '@/core/domain/MqttEvent'
+import type { CommunicationRepository } from '@/core/ports/CommunicationRepository'
+import type { CommunicationEvent } from '@/core/domain/communication'
 
-export class CommunicationAdapter implements MqttRepository {
+export class CommunicationAdapter implements CommunicationRepository {
   private client: mqtt.MqttClient | null = null
-  private callback: ((event: MqttEvent) => void) | null = null
-  private topic = 'test/topic/vue-hexagonal-example/#'
+  private callback: ((event: CommunicationEvent) => void) | null = null
+  private topic = 'test/topic/tap-virtual/#';
 
   connect(): void {
     if (this.client) return
 
-    // Connect to a public test broker over WebSockets
-    this.client = mqtt.connect('wss://test.mosquitto.org:8081')
+    const brokerUrl = import.meta.env.VITE_MQTT_URL
+    this.client = mqtt.connect(brokerUrl)
 
     this.client.on('connect', () => {
       console.log('Connected to public MQTT broker')
@@ -25,16 +25,16 @@ export class CommunicationAdapter implements MqttRepository {
     this.client.on('message', (topic, message) => {
       if (this.callback) {
         const time = new Date()
-        const event: MqttEvent = {
-          id: Math.random().toString(36).substr(2, 9),
-          timestamp: time.toLocaleTimeString(),
+        const event: CommunicationEvent = {
+          id: crypto.randomUUID(),
+          timestamp: time.toISOString(),
           topic: topic,
           content: message.toString(),
         }
         this.callback(event)
       }
     })
-    
+
     this.client.on('error', (err) => {
       console.error('MQTT error: ', err)
     })
@@ -47,7 +47,7 @@ export class CommunicationAdapter implements MqttRepository {
     }
   }
 
-  onEvent(callback: (event: MqttEvent) => void): void {
+  onEvent(callback: (event: CommunicationEvent) => void): void {
     this.callback = callback
   }
 
