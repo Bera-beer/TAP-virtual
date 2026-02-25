@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useVirtualTap } from '@/application/useVirtualTap'
-import { VirtualTapState } from '@/types/tap'
+import { useVirtualTap } from '@/composables/useVirtualTap'
+import { VirtualTapState } from '@/core/domain/tap'
 import TapHeader from './TapHeader.vue'
 import TapControls from './TapControls.vue'
 import TapOperation from './TapOperation.vue'
