@@ -20,12 +20,10 @@ let unsubscribeState: { unsubscribe: () => void }
 let unsubscribeCmd: { unsubscribe: () => void }
 
 onMounted(() => {
-  // Subscribe to Application Layer state changes and publish to Communication Adapter
   unsubscribeState = actorRef.subscribe((newState) => {
     publishState(newState.value, newState.context)
   })
 
-  // Listen to remote Commands from Communication Adapter and interact with Application Layer
   unsubscribeCmd = onCommand((command) => {
     if (command === 'MAINTENANCE') {
       toggleMaintenance();
@@ -45,7 +43,6 @@ const isMaintenance = computed(() => state.value.matches(VirtualTapState.MAINTEN
 const isOperation = computed(() => state.value.matches(VirtualTapState.OPERATION));
 
 const currentStatus = computed<string>(() => {
-  // Extracting a simple string representation from the potentially nested state object
   const s = state.value.value;
   if (typeof s === 'string') return s;
   if (s && typeof s === 'object') {

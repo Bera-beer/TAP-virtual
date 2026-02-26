@@ -5,19 +5,22 @@ import type { CommunicationEvent } from '@/core/domain/communication'
 export class CommunicationAdapter implements CommunicationRepository {
   private client: mqtt.MqttClient | null = null
   private callback: ((event: CommunicationEvent) => void) | null = null
-  private topic = 'test/topic/tap-virtual/#';
+  private topics: string[] = [];
 
   connect(): void {
     if (this.client) return
 
     const brokerUrl = import.meta.env.VITE_MQTT_URL
+    const tapId = import.meta.env.VITE_TAP_ID || 'TAP-01'
+    this.topics = ['telemetry/state', `device/${tapId}`];
+    
     this.client = mqtt.connect(brokerUrl)
 
     this.client.on('connect', () => {
       console.log('Connected to public MQTT broker')
-      this.client?.subscribe(this.topic, (err) => {
+      this.client?.subscribe(this.topics, (err) => {
         if (!err) {
-          console.log(`Subscribed to topic: ${this.topic}`)
+          console.log(`Subscribed to topics: ${this.topics.join(', ')}`)
         }
       })
     })
