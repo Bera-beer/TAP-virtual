@@ -1,5 +1,5 @@
-export const MQTT_TOPIC_STATE = 'test/topic/tap-virtual/state'
-export const MQTT_TOPIC_CMD = 'test/topic/tap-virtual/commands'
+export const MQTT_TOPIC_TELEMETRY = 'telemetry/state'
+export const getDeviceMqttTopic = (tapId: string) => `device/${tapId}`
 
 export interface CommunicationEvent {
   id: string
