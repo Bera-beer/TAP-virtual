@@ -10,4 +10,16 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    proxy: {
+      '/admin-auth': {
+        target: 'http://localhost:9000',
+        changeOrigin: true,
+      },
+      '/api': {
+        target: 'http://localhost:9000',
+        changeOrigin: true,
+      }
+    }
+  }
 })
