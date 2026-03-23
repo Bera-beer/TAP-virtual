@@ -4,6 +4,7 @@ import { fromPromise } from 'xstate';
 import { useMachine } from '@xstate/vue';
 import { virtualTapMachine, VirtualTapEventName } from '@/core/domain/virtualTapMachine';
 import { VirtualTapState } from '@/core/domain/tap';
+import { communicationService } from '@/infrastructure/providers/CommunicationProvider';
 
 export function useVirtualTap() {
   const servedAmountMl = ref(0);
@@ -12,7 +13,37 @@ export function useVirtualTap() {
   const remainingMs = ref(0);
 
   const { snapshot, send, actorRef } = useMachine(virtualTapMachine.provide({
+    actions: {
+      wrapUpOperation: ({ context }) => {
+        if (context.user && context.servedAmountMl !== undefined) {
+          communicationService.publishConsumption(
+            context.user.id,
+            context.servedAmountMl
+          );
+        }
+      }
+    },
     actors: {
+      validateCredential: fromPromise(async ({ input }: { input: { tag: string | undefined } }) => {
+        if (!input.tag) throw new Error('Tag is required');
+        communicationService.publishTagDetection(input.tag);
+        const response = await communicationService.waitForCommand();
+        
+        // Unwrap NestJS MQTT response if needed
+        const data = response.data || response;
+        
+        if (!data || !data.userId) {
+            throw new Error('Invalid validation response');
+        }
+
+        return {
+            user: {
+                id: data.userId,
+                name: `User ${data.userId.split('-')[0]}` // Partial name from ID for demo
+            },
+            limitAmountMl: data.creditAvailable || 0
+        };
+      }),
       resetServerAmount: fromPromise(async () => {
         servedAmountMl.value = 0;
       })
@@ -21,7 +52,8 @@ export function useVirtualTap() {
 
   const stateSubscription = actorRef.subscribe((newState) => {
     console.log(`[Tap Machine] State triggered:`, newState.value, newState.context);
-    
+
+
     limitAmountMl.value = newState.context.limitAmountMl || 0;
     valveOpened.value = newState.context.valveOpened || false;
 
@@ -37,6 +69,9 @@ export function useVirtualTap() {
     console.log('Flow: +', amount, ' Limit:', snapshot.value.context.limitAmountMl);
     servedAmountMl.value += amount;
     
+    // Update context for wrapUpOperation
+    send({ type: VirtualTapEventName.UPDATE_SERVED_AMOUNT, amount: servedAmountMl.value });
+
     if (servedAmountMl.value >= snapshot.value.context.limitAmountMl) {
       send({ type: VirtualTapEventName.DONE });
     }

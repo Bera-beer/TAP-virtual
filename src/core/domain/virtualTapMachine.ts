@@ -1,11 +1,13 @@
 import { setup, fromPromise, assign } from 'xstate';
 import { VirtualTapState } from '@/core/domain/tap';
+
 export const VirtualTapEventName = {
     DONE: 'DONE',
     TAG_DETECTED: 'TAG_DETECTED',
     MAINTENANCE_END: 'MAINTENANCE_END',
     MAINTENANCE_START: 'MAINTENANCE_START',
     EXPIRED: 'EXPIRED',
+    UPDATE_SERVED_AMOUNT: 'UPDATE_SERVED_AMOUNT',
 } as const;
 
 export type VirtualTapEventName = typeof VirtualTapEventName[keyof typeof VirtualTapEventName];
@@ -21,6 +23,7 @@ export interface VirtualTapContext {
     user?: VirtualTapUser;
     remainingMs?: number;
     valveOpened: boolean;
+    servedAmountMl?: number;
 }
 
 export type VirtualTapEvent =
@@ -28,7 +31,8 @@ export type VirtualTapEvent =
     | { type: typeof VirtualTapEventName.TAG_DETECTED; tag: string }
     | { type: typeof VirtualTapEventName.MAINTENANCE_END }
     | { type: typeof VirtualTapEventName.MAINTENANCE_START }
-    | { type: typeof VirtualTapEventName.EXPIRED };
+    | { type: typeof VirtualTapEventName.EXPIRED }
+    | { type: typeof VirtualTapEventName.UPDATE_SERVED_AMOUNT; amount: number };
 
 export const virtualTapMachine = setup({
     types: {
@@ -38,25 +42,19 @@ export const virtualTapMachine = setup({
     actions: {
         valveOpen: assign({ valveOpened: true }),
         valveClose: assign({ valveOpened: false }),
-        wrapUpOperation: () => { },
+        wrapUpOperation: () => {
+            console.warn('wrapUpOperation action not provided');
+        },
         assignCredential: assign({
             currentTag: ({ event }) => (event.type === VirtualTapEventName.TAG_DETECTED ? event.tag : undefined)
         })
     },
     actors: {
-        validateCredential: fromPromise(async () => {
-            // Mock API call delay to see the 'validating' state transition
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            return {
-                user: {
-                    id: 'user-123',
-                    name: 'John Doe'
-                },
-                limitAmountMl: 200
-            };
+        validateCredential: fromPromise(async ({ input: _input }: { input: { tag: string | undefined } }): Promise<{ user: VirtualTapUser, limitAmountMl: number }> => {
+            throw new Error('validateCredential actor not provided');
         }),
         resetServerAmount: fromPromise(async () => {
-            // Placeholder replaced explicitly at application level
+            // Handled in composable but good to keep as actor if needed
         })
     },
     guards: {
@@ -89,7 +87,7 @@ export const virtualTapMachine = setup({
                 invoke: {
                     id: 'validateCredential',
                     src: 'validateCredential',
-                    input: {},
+                    input: ({ context }) => ({ tag: context.currentTag }),
                     onDone: {
                         target: VirtualTapState.OPERATION,
                         actions: assign({
@@ -127,6 +125,11 @@ export const virtualTapMachine = setup({
                     },
                     [VirtualTapEventName.EXPIRED]: {
                         target: VirtualTapState.FINISHED
+                    },
+                    [VirtualTapEventName.UPDATE_SERVED_AMOUNT]: {
+                        actions: assign({
+                            servedAmountMl: ({ event }) => event.amount
+                        })
                     }
                 },
                 after: {

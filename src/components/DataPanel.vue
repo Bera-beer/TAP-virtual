@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useCommunication } from '@/composables/useCommunication'
+import { useMonitoring } from '@/composables/useMonitoring'
 import moment from 'moment'
 import {
   Table,
@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-const { events, publishCommand } = useCommunication()
+const { events, publishCommand } = useMonitoring()
 
 const formatTime = (timestamp: string) => moment(timestamp).format('HH:mm:ss')
 </script>

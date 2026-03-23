@@ -23,9 +23,7 @@ export function useCommunication() {
     communicationService.stopListening();
   });
 
-  const publishState = (stateValue: any, context: any) => {
-    communicationService.publishState(stateValue, context);
-  };
+
 
   const publishCommand = (command: string, payload?: any) => {
     communicationService.publishCommand(command, payload);
@@ -37,7 +35,6 @@ export function useCommunication() {
 
   return {
     events,
-    publishState,
     publishCommand,
     onCommand,
   };

@@ -8,33 +8,33 @@ import TapHeader from './TapHeader.vue'
 import TapControls from './TapControls.vue'
 import TapOperation from './TapOperation.vue'
 
-const tapId = 'TAP-01'
+import { deviceService } from '@/infrastructure/providers/DeviceProvider'
+
+const tapId = deviceService.getDeviceId()
 
 // State machine handlers
-const { state, actorRef, identify, flow, toggleMaintenance, servedAmountMl, limitAmountMl, valveOpened, remainingMs } = useVirtualTap()
+const { state, identify, flow, toggleMaintenance, servedAmountMl, limitAmountMl, valveOpened, remainingMs } = useVirtualTap()
 
 // Communication handlers
-const { publishState, onCommand } = useCommunication()
+const { onCommand } = useCommunication()
 
-let unsubscribeState: { unsubscribe: () => void }
 let unsubscribeCmd: { unsubscribe: () => void }
 
 onMounted(() => {
-  unsubscribeState = actorRef.subscribe((newState) => {
-    publishState(newState.value, newState.context)
-  })
-
-  unsubscribeCmd = onCommand((command) => {
+  unsubscribeCmd = onCommand((command, payload) => {
     if (command === 'MAINTENANCE') {
       toggleMaintenance();
     } else if (command === 'START_OPERATION') {
       identify('MQTT-CMD');
+    } else if (command === 'VALIDATE_TAG' && payload.userId) {
+      // The machine waiter in validateCredential actor will handle this via CommunicationService.waitForCommand()
+      // But we can also log it here if needed.
+      console.log('Received validation response:', payload);
     }
   })
 })
 
 onUnmounted(() => {
-  unsubscribeState?.unsubscribe()
   unsubscribeCmd?.unsubscribe()
 })
 

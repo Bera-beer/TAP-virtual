@@ -1,17 +1,25 @@
-import { Subject, type Observable } from 'rxjs'
-import { filter } from 'rxjs/operators'
+import { Subject, type Observable, firstValueFrom } from 'rxjs'
+import { filter, map, timeout } from 'rxjs/operators'
 import type * as CommunicationRepository from '../ports/CommunicationRepository'
 import type { CommunicationEvent } from '../domain/communication'
-import { MQTT_TOPIC_TELEMETRY , getDeviceMqttTopic } from '../domain/communication'
+import { 
+  getDeviceMqttTopic, 
+  getTagMqttTopic, 
+  getConsumptionMqttTopic 
+} from '../domain/communication'
+import { deviceService } from '@/infrastructure/providers/DeviceProvider'
 
 export class CommunicationService {
   private repository: CommunicationRepository.CommunicationRepository
   private eventsSubject = new Subject<CommunicationEvent>()
   public events$: Observable<CommunicationEvent> = this.eventsSubject.asObservable()
-  private tapId: string = import.meta.env.VITE_TAP_ID || 'TAP-01'
 
   constructor(repository: CommunicationRepository.CommunicationRepository) {
     this.repository = repository
+  }
+
+  private get tapId() {
+    return deviceService.getDeviceId()
   }
 
   startListening() {
@@ -25,17 +33,24 @@ export class CommunicationService {
     this.repository.disconnect()
   }
 
-  publishState(stateValue: any, context: any) {
-    this.repository.publish(MQTT_TOPIC_TELEMETRY, JSON.stringify({ 
-      tapId: this.tapId, 
-      status: stateValue, 
-      context 
+
+
+  publishTagDetection(tagCode: string) {
+    this.repository.publish(getTagMqttTopic(this.tapId), JSON.stringify({ 
+      tagCode 
+    }))
+  }
+
+  publishConsumption(userId: string, amountConsumed: number) {
+    this.repository.publish(getConsumptionMqttTopic(this.tapId), JSON.stringify({ 
+      userId,
+      amountConsumed,
+      referenceTimestamp: Date.now()
     }))
   }
 
   publishCommand(command: string, payload?: any) {
     this.repository.publish(getDeviceMqttTopic(this.tapId), JSON.stringify({ 
-      tapId: this.tapId, 
       command, 
       ...payload 
     }))
@@ -47,7 +62,7 @@ export class CommunicationService {
       .subscribe((event) => {
         try {
           const payload = JSON.parse(event.content)
-          callback(payload.command, payload)
+          callback(payload.userId ? 'VALIDATE_TAG' : 'UNKNOWN', payload)
         } catch (e) {
           console.error('Failed to parse command payload', e)
         }
@@ -55,5 +70,16 @@ export class CommunicationService {
     return {
       unsubscribe: () => sub.unsubscribe()
     }
+  }
+
+  async waitForCommand(timeoutMs = 10000): Promise<any> {
+    const topic = getDeviceMqttTopic(this.tapId);
+    return firstValueFrom(
+      this.events$.pipe(
+        filter((event: CommunicationEvent) => event.topic === topic),
+        map((event: CommunicationEvent) => JSON.parse(event.content)),
+        timeout(timeoutMs)
+      )
+    );
   }
 }

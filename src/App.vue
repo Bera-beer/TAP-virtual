@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useSwipe } from '@vueuse/core'
 import TopMenu from './components/TopMenu.vue'
 import VirtualTap from './components/VirtualTap.vue'
@@ -9,8 +9,22 @@ import {
   TabsList,
   TabsTrigger,
 } from '@/components/ui/tabs'
+import { authService } from './infrastructure/providers/AuthProvider'
+import { deviceService } from './infrastructure/providers/DeviceProvider'
 
 const activeTab = ref('data')
+const isReady = ref(false)
+
+onMounted(async () => {
+  try {
+    await authService.initializeAuth()
+    await deviceService.initializeDevice()
+    isReady.value = true
+  } catch (error) {
+    console.error('Initialization failed', error)
+    isReady.value = true // Continue anyway, fallback logic exists
+  }
+})
 
 const swipeContainer = ref<HTMLElement | null>(null)
 const { lengthX, lengthY } = useSwipe(swipeContainer, {
@@ -29,7 +43,7 @@ const { lengthX, lengthY } = useSwipe(swipeContainer, {
 <template>
   <div class="min-h-screen bg-background text-foreground flex flex-col overflow-x-hidden">
     <TopMenu />
-    <main class="flex-1 w-full max-w-7xl mx-auto flex flex-col relative pb-24 md:pb-8 md:p-8">
+    <main v-if="isReady" class="flex-1 w-full max-w-7xl mx-auto flex flex-col relative pb-24 md:pb-8 md:p-8">
       
       <!-- Desktop Layout: Flex (hidden on mobile) -->
       <div class="hidden md:flex gap-6 items-start h-full">
@@ -57,6 +71,9 @@ const { lengthX, lengthY } = useSwipe(swipeContainer, {
       </div>
 
     </main>
+    <div v-else class="flex-1 flex items-center justify-center">
+      <div class="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+    </div>
   </div>
 </template>
 <style scoped>
